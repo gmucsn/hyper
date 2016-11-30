@@ -1,6 +1,4 @@
-// Hyperinflation tree.0
-
-// GIT CHECK
+// Hyperinflation ver.three-P-0
 
 // Working Notes
 // 11.29 
@@ -9,6 +7,8 @@
 // - Need to include 3 extra players for the government. global government boolean to trigger government players
 // - Remove gov't bot? - removed: if needed, refer to the previous version
 // - With no government, should player 1 now be player index 0? - seems like an obvious yes, but debugging the dependencies will be a bitch...
+// 11.30
+// - Contract function updated for the human-government using boolean government_buyer connected to buyer_number
 
 // Authorized users
 list ADMIN_LIST = ["Chris CSN15", "Chris CSN 00", "Bob BobCSN00","Kevin McCabe", "Kathleen CSN00", "Peter Twieg"]; //List of Admin Users for verification.
@@ -572,11 +572,11 @@ contract(integer item, integer buyer_number, integer seller_number, integer buy_
 	
 	// There needs to be some way to control for each of the different government players
 	// - Simple boolean for government? i.e. if buyer_number == 4, 8, 12 then government_buyer = 1
-	// - From this, when
+	// - This assumes there are set player numbers for government.
 	
 	integer government_buyer = 0;
 	
-	if(buyer_number == 4 || buyer_number == 8 || buyer_number == 12) government_buyer = 1;
+	if(buyer_number == 4 || buyer_number == 8 || buyer_number == 12) government_buyer = 1; // If the buyer is a government player, then it will skip the cash requirement.
 	
 	llSay(0, (string)government_buyer);
 	
@@ -600,6 +600,12 @@ contract(integer item, integer buyer_number, integer seller_number, integer buy_
         inventory_list = llListReplaceList(inventory_list, buyer_tokens, get_index(buyer_number, TOKEN_INDEX), get_index(buyer_number, TOKEN_INDEX));
         seller_tokens = llList2Integer(inventory_list, get_index(seller_number, TOKEN_INDEX)) + price; // Quantity of tokens that the seller holds.
         inventory_list = llListReplaceList(inventory_list, seller_tokens, get_index(seller_number, TOKEN_INDEX), get_index(seller_number, TOKEN_INDEX));
+		
+		if(government_buyer == 1)
+		{
+			print_money(price, buyer_number)
+		}
+		
 		
         if(price >= max_price)
         {
