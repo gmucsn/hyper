@@ -21,6 +21,7 @@ key treatment_id; // query id for notecard
 
 // Set by notecard read - see the dataserver event at end of default state
 string treatment_name; // Line 0 - Name of the treatment
+integer government; // Line 1 - Government player true/false
 integer players; // Line 1 - Number of players
 float govt_buy_prob; // Line 2 - Probability of a government purchase.
 float govt_buy_range; // Line 3 - Percentage range of government purchase amount.
@@ -295,12 +296,12 @@ announce_inventory()
 announce_market()
 {
     market_list = [standing_bid_good_1, standing_bidder_good_1,
-					standing_ask_good_1, standing_asker_good_1,
-					standing_bid_good_2,standing_bidder_good_2,
-					standing_ask_good_2,standing_asker_good_2,
-					standing_bid_good_3,standing_bidder_good_3,
-					standing_ask_good_3,standing_asker_good_3];
-					
+                    standing_ask_good_1, standing_asker_good_1,
+                    standing_bid_good_2,standing_bidder_good_2,
+                    standing_ask_good_2,standing_asker_good_2,
+                    standing_bid_good_3,standing_bidder_good_3,
+                    standing_ask_good_3,standing_asker_good_3];
+                    
     record(8, llList2CSV(market_list)); // 8 is the market record toggle.
     hud_message(-2,0); // Sends updated market information to the player HUDs.
 }
@@ -325,7 +326,7 @@ market_reset() // returns market values to 0
 
 float CobbDouglas(integer player_number, integer good_1, integer good_2, integer good_3) // For subject earnings
 {
-	// Cobb-Douglas Utility Function  U = exchange_rate * ( num1 ^ theta * num2 ^ theta) * num3 ^ theta
+    // Cobb-Douglas Utility Function  U = exchange_rate * ( num1 ^ theta * num2 ^ theta) * num3 ^ theta
     utility_search_index = player_number * 3;
     theta1 = llList2Float(utility_list, utility_search_index);
     theta2 = llList2Float(utility_list, utility_search_index + 1);
@@ -467,7 +468,7 @@ ask(list ask_list)
     // index values 1,2, and 3 are position values.
     ask_item = llList2Integer(ask_list, 4); // good number
     ask_price = llList2Integer(ask_list, 5); // bid value.
-	
+    
     if (ask_item == 1 && llList2Integer(inventory_list, get_index(asker, GOOD_1_INDEX)) > 0) // Tests to see if the asker has an item to sell.
     {    
         integer new_low_ask = 0; // Used for test below
@@ -569,49 +570,48 @@ ask(list ask_list)
 
 contract(integer item, integer buyer_number, integer seller_number, integer buy_price, integer sell_price)
 {
-	
-	// There needs to be some way to control for each of the different government players
-	// - Simple boolean for government? i.e. if buyer_number == 4, 8, 12 then government_buyer = 1
-	// - This assumes there are set player numbers for government.
-	
-	integer government_buyer = 0;
-	
-	if(buyer_number == 4 || buyer_number == 8 || buyer_number == 12) government_buyer = 1; // If the buyer is a government player, then it will skip the cash requirement.
-	
-	llSay(0, (string)government_buyer);
-	
-    price = (buy_price + sell_price) / 2; // Average of buy and sell prices
-	
-    if (llList2Integer(inventory_list, get_index(seller_number, item)) > 0 
-		&& (llList2Integer(inventory_list, get_index(buyer_number, TOKEN_INDEX)) >= price || government_buyer = 1)
-		&& buy_price != 0 
-		&& sell_price != 0) // Retest conditions in bid & ask functions.
+    
+    // There needs to be some way to control for each of the different government players
+    // - Simple boolean for government? i.e. if buyer_number == 4, 8, 12 then government_buyer = 1
+    // - This assumes there are set player numbers for government.
+    
+    integer government_buyer = 0;
+    if (government == 1)
     {
-		
-		llSay(0, (string)government_buyer);
-		
+        //if(buyer_number == 4 || buyer_number == 8 || buyer_number == 12) government_buyer = 1; // If the buyer is a government player, then it will skip the cash requirement.
+        if(buyer_number == 3 || buyer_number == 6 || buyer_number == 9) government_buyer = 1; // first test with 9 players
+
+    }
+    price = (buy_price + sell_price) / 2; // Average of buy and sell prices
+    
+    if (llList2Integer(inventory_list, get_index(seller_number, item)) > 0
+		&& (llList2Integer(inventory_list, get_index(buyer_number, TOKEN_INDEX)) >= price || government_buyer == 1)
+		&& buy_price != 0 && sell_price != 0) // Retest conditions in bid & ask functions.
+    {
+        
         record(6,(string)buyer_number + "," + (string)seller_number + "," + (string)item + "," + (string)price);
-		
+        
         buyer_quantity = llList2Integer(inventory_list, get_index(buyer_number,item)) + 1; // Quantity of the item that the buyer holds.
         inventory_list = llListReplaceList(inventory_list, buyer_quantity, get_index(buyer_number, item), get_index(buyer_number, item)); 
         seller_quantity = llList2Integer(inventory_list, get_index(seller_number, item)) - 1; // Quantity of the item that the seller holds.
         inventory_list = llListReplaceList(inventory_list, seller_quantity, get_index(seller_number, item), get_index(seller_number, item));
-        buyer_tokens = llList2Integer(inventory_list, get_index(buyer_number, TOKEN_INDEX)) - price; // Quantity of tokens that the buyer holds.
-        inventory_list = llListReplaceList(inventory_list, buyer_tokens, get_index(buyer_number, TOKEN_INDEX), get_index(buyer_number, TOKEN_INDEX));
+        if(government_buyer != 1) buyer_tokens = llList2Integer(inventory_list, get_index(buyer_number, TOKEN_INDEX)) - price; // Quantity of tokens that the buyer holds.
+        if(government_buyer != 1) inventory_list = llListReplaceList(inventory_list, buyer_tokens, get_index(buyer_number, TOKEN_INDEX), get_index(buyer_number, TOKEN_INDEX));
         seller_tokens = llList2Integer(inventory_list, get_index(seller_number, TOKEN_INDEX)) + price; // Quantity of tokens that the seller holds.
         inventory_list = llListReplaceList(inventory_list, seller_tokens, get_index(seller_number, TOKEN_INDEX), get_index(seller_number, TOKEN_INDEX));
-		
-		if(government_buyer == 1)
-		{
-			print_money(price, buyer_number)
-		}
-		
-		
+        
+        if(government_buyer == 1)
+        {
+            llSay(0, "PRINTING MONEY!!!");
+            print_money(price, buyer_number);
+        }
+        
+        
         if(price >= max_price)
         {
             max_price = price;
         }
-		
+        
         if (item == 1)
         {
             standing_bid_good_1 = 0;
@@ -665,13 +665,20 @@ contract(integer item, integer buyer_number, integer seller_number, integer buy_
     }
 }
 
-print_money(integer token_amount, integer government_number) // needs to be adapted to the new human-gov't
+print_money(integer token_amount, integer buyer_number) // needs to be adapted to the new human-gov't
 {
-    //llSay(0,"Print Money");
-    gov_token_amount = llList2Integer(inventory_list, get_index(government_number, TOKEN_INDEX));
+    llSay(0,"Print Money II");
+    llSay(0, "Token Amount: " + token_amount);
+    gov_token_amount = llList2Integer(inventory_list, get_index(buyer_number, TOKEN_INDEX));
     //gov_token_amount += 2 * token_amount; // TODO FIND OUT WHY THE HECK THIS IS MULTIPLED BY 2
-	gov_token_amount += token_amount;
-    inventory_list = llListReplaceList(inventory_list, gov_token_amount, get_index(government_numbergovernment_number, TOKEN_INDEX), get_index(0, TOKEN_INDEX));
+    gov_token_amount += token_amount;
+	
+	llSay(0, "INVENTORY LIST: " + (string)inventory_list);
+	
+    inventory_list = llListReplaceList(inventory_list, gov_token_amount, get_index(buyer_number, TOKEN_INDEX), get_index(buyer_number, TOKEN_INDEX));
+	
+	llSay(0, "INVENTORY LIST II: " + (string)inventory_list);
+	
     money_supply += token_amount; // money supply will reflect the sum of all government purchases
     record(9, (string)token_amount);
 }
@@ -797,60 +804,67 @@ default
                 else if(treatment_line == 1)
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
+                    government = (integer)data; // Boolean for government player
+                    treatment_line++;
+                    treatment_id = llGetNotecardLine(notecard_name, treatment_line);
+                }
+                else if(treatment_line == 2)
+                {
+                    llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     players = (integer)data; // Line 1 - Number of players
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 2) // Line 3 - Length of timer cycle in seconds.
+                else if(treatment_line == 3) // Line 3 - Length of timer cycle in seconds.
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     timer_length = (float)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 3) // Line 4 - When timer cycle = gen_cycle, then a generate message is sent to harvesters.
+                else if(treatment_line == 4) // Line 4 - When timer cycle = gen_cycle, then a generate message is sent to harvesters.
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     generate_frequency = (integer)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 4) // Line 5 - Initial endowment of good 1.
+                else if(treatment_line == 5) // Line 5 - Initial endowment of good 1.
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     initial_good_1 = (integer)data; // Line 1 - Number of players
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 5) // Line 6 - Initial endowment of good 2.
+                else if(treatment_line == 6) // Line 6 - Initial endowment of good 2.
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     initial_good_2 = (integer)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 6) // Line 7 - Initial endowment of good 3..
+                else if(treatment_line == 7) // Line 7 - Initial endowment of good 3..
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     initial_good_3 = (integer)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 7) // Line 8 - Initial endowment of cash.
+                else if(treatment_line == 8) // Line 8 - Initial endowment of cash.
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     initial_tokens = (integer)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 8) // Line 9 - exchange rate for payments
+                else if(treatment_line == 9) // Line 9 - exchange rate for payments
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     exchange_rate = (float)data;
                     treatment_line++;
                     treatment_id = llGetNotecardLine(notecard_name, treatment_line);
                 }
-                else if(treatment_line == 9) // Line 10 - List of theta values for every player [0.33,0.33,0.33] standard
+                else if(treatment_line == 10) // Line 10 - List of theta values for every player [0.33,0.33,0.33] standard
                 {
                     llSay(0,"Line " + (string)treatment_line + " data is: " + data);
                     utility_list = llCSV2List(data);
